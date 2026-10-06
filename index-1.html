@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7efe7">
+<title>เริ่มต้นใช้ชีวิต — Prototype</title>
+<style>
+*{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,"Noto Sans Thai",sans-serif;background:#f7f1eb;color:#3e3632}
+button,input,textarea,select{font:inherit} button{border:0;cursor:pointer}
+.app{max-width:720px;margin:auto;min-height:100vh;background:#fffaf6}
+header{position:sticky;top:0;z-index:5;background:#fffaf6ee;backdrop-filter:blur(10px);padding:14px 16px;border-bottom:1px solid #eadfd7;display:flex;justify-content:space-between;align-items:center}
+.logo{font-weight:800}.iconbtn{background:#efe5dd;border-radius:12px;padding:8px 11px}
+main{padding:20px 16px 60px}.screen{display:none}.screen.active{display:block}
+.hero{min-height:82vh;display:grid;place-items:center;text-align:center}
+.hero button{font-size:30px;font-weight:800;background:none;padding:25px}
+.card{background:#fff;border:1px solid #eadfd7;border-radius:18px;padding:16px;margin:12px 0;box-shadow:0 4px 18px #4b382d0b}
+h1{font-size:25px;margin:8px 0} h2{font-size:19px;margin:4px 0 12px} h3{font-size:16px;margin:0 0 10px}
+.muted{color:#887a71;font-size:13px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}
+.tabs button,.pill{background:#f0e7e0;border-radius:999px;padding:8px 12px}.tabs button.active{background:#cfae97;color:white}
+.task{display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px;align-items:center;padding:11px 0;border-bottom:1px dashed #e8ddd5}
+.task:last-child{border-bottom:0}.task input[type=checkbox]{width:20px;height:20px}
+.progress{width:76px}.add{background:#4e443e;color:white;border-radius:10px;padding:8px 12px}
+textarea{width:100%;min-height:100px;border:1px solid #dfd2ca;border-radius:12px;padding:11px;resize:vertical;background:#fffdfb}
+input[type=text],input[type=number],input[type=date]{border:1px solid #dfd2ca;border-radius:10px;padding:8px;background:white}
+.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.calhead{text-align:center;font-size:12px;color:#8b7d74;padding:5px}
+.day{min-height:52px;background:#faf6f2;border:1px solid #eee3db;border-radius:10px;padding:6px;text-align:left;position:relative}
+.day.today{outline:2px solid #b98e70}.day .num{font-weight:700}.day .dot{font-size:12px}
+canvas#decor{width:100%;height:220px;border:1px dashed #d8c9bf;border-radius:14px;background:#fff;touch-action:none}
+.stickers button{font-size:24px;background:#f4ebe4;border-radius:10px;padding:6px}
+#pie{width:220px;height:220px;margin:auto;display:block;border-radius:50%;background:none}
+.back{background:none;color:#6e5d53;padding:0;margin-bottom:8px}
+small{color:#8b7d74}.danger{background:#f3dddd;color:#8a4b4b}
+</style>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#f7eee8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Life Diary">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+</head>
+<body>
+<div class="app">
+<header><div class="logo">🌷 เริ่มต้นใช้ชีวิต</div><button class="iconbtn" onclick="show('calendar')">📅</button></header>
+<main>
+<section id="home" class="screen active">
+ <div class="hero"><button onclick="openToday()">เริ่มต้นใช้ชีวิต<br><span class="muted">แตะเพื่อเข้าสู่วันนี้</span></button></div>
+</section>
+
+<section id="calendar" class="screen">
+ <button class="back" onclick="show('home')">← หน้าแรก</button>
+ <div class="row between"><h1>ปฏิทิน</h1><input id="monthPicker" type="month" onchange="renderCalendar()"></div>
+ <div class="card"><div class="calendar" id="calendarGrid"></div></div>
+</section>
+
+<section id="day" class="screen">
+ <button class="back" onclick="show('calendar')">← ปฏิทิน</button>
+ <div class="row between"><div><h1 id="dayTitle"></h1><div class="muted">หน้าของวันนี้</div></div><button class="iconbtn" onclick="show('templates')">📋 ตาราง</button></div>
+ <div class="card"><h2>ตารางเวลาของวันนี้</h2><div class="tabs" id="templateTabs"></div><div id="tasks"></div><div class="row" style="margin-top:10px"><button class="add" onclick="addTask()">＋ เพิ่มช่วงเวลา</button></div></div>
+ <div class="card"><h2>📊 สรุปเวลา 24 ชั่วโมง</h2><p class="muted">แอปจะคำนวณเวลาจากช่วงเวลาในตารางให้เอง และนำไปสร้างแผนภูมิวงกลม</p><canvas id="pie" width="220" height="220"></canvas><div id="pieLegend" class="muted"></div><div id="totalTime" style="margin-top:8px;font-weight:700"></div></div>
+ <div class="card"><h2>🧷 กันเหนียว</h2><div id="reminders"></div><button class="add" onclick="addReminder()">＋ เพิ่มสิ่งที่ต้องไม่ลืม</button></div>
+ <div class="card"><h2>🌙 ฝันที่จำได้</h2><textarea id="dream" placeholder="เขียนสั้น ๆ ก็ได้..."></textarea></div>
+ <div class="card"><h2>📖 เรื่องที่อยากเล่าในวันนี้</h2><textarea id="diary" placeholder="วันนี้อยากเล่าอะไร เขียนเท่าที่อยากเขียนเลย"></textarea></div>
+ <div class="card"><h2>💭 ข้อคิดในวันนี้</h2><textarea id="thought" placeholder="มีอะไรที่อยากเก็บไว้จากวันนี้ไหม"></textarea></div>
+ <div class="card"><h2>🎨 สิ่งที่อยากเล่าผ่านภาพ</h2><div class="stickers row">
+  <button onclick="addSticker('🌷')">🌷</button><button onclick="addSticker('⭐')">⭐</button><button onclick="addSticker('🦋')">🦋</button><button onclick="addSticker('🍑')">🍑</button><button onclick="addSticker('🎀')">🎀</button><button onclick="addSticker('☁️')">☁️</button>
+ </div><br><canvas id="decor" width="680" height="220"></canvas><div class="row" style="margin-top:8px"><button class="add" onclick="clearCanvas()">ล้างพื้นที่วาด</button><small>ต้นแบบนี้แตะ/ลากเพื่อวาดได้</small></div></div>
+</section>
+
+<section id="templates" class="screen">
+ <button class="back" onclick="openToday()">← กลับหน้าวันนี้</button>
+ <h1>ตารางที่ใช้ซ้ำได้</h1><p class="muted">แก้ต้นแบบได้ และการติ๊กของแต่ละวันจะแยกจากกัน</p>
+ <div id="templateList"></div>
+ <div class="row"><button class="add" onclick="newTemplate()">＋ เพิ่มตาราง</button></div>
+</section>
+</main>
+</div>
+
+<script>
+const KEY='lifeDiaryPrototype_v2';
+let db=JSON.parse(localStorage.getItem(KEY)||'null')||{
+ templates:[
+  {id:'t1',name:'ตาราง 1',tasks:[
+   {id:'a1',name:'😴 นอน',start:'00:00',end:'07:00',progress:false},
+   {id:'a2',name:'🏃‍♀️ ออกกำลังกาย',start:'07:00',end:'07:15',progress:false},
+   {id:'a3',name:'🚿 อาบน้ำ',start:'07:15',end:'07:30',progress:false},
+   {id:'a4',name:'🍳 กินข้าวเช้า',start:'07:30',end:'08:00',progress:false},
+   {id:'a5',name:'📝 เตรียมตัว + วางแผนวัน',start:'08:00',end:'08:30',progress:false},
+   {id:'a6',name:'🎨 ปั่นงาน',start:'08:30',end:'11:00',progress:true},
+   {id:'a7',name:'🛋️ พักเงียบ ๆ / อ่านนิยาย / ทำอะไรสบาย ๆ',start:'11:00',end:'12:00',progress:false},
+   {id:'a8',name:'🍚 กินข้าวกลางวัน',start:'12:00',end:'12:30',progress:false},
+   {id:'a9',name:'🌿 พัก / เวลาส่วนตัว',start:'12:30',end:'13:30',progress:false},
+   {id:'a10',name:'🎨 ปั่นงาน',start:'13:30',end:'15:30',progress:true},
+   {id:'a11',name:'🛋️ พัก / งีบ / ทำอะไรสบาย ๆ',start:'15:30',end:'16:00',progress:false},
+   {id:'a12',name:'📖 อ่านนิยาย',start:'16:00',end:'17:00',progress:false},
+   {id:'a13',name:'🍚 กินข้าวเย็น',start:'17:00',end:'17:30',progress:false},
+   {id:'a14',name:'🌿 พักหลังอาหาร / เวลาส่วนตัว',start:'17:30',end:'18:00',progress:false},
+   {id:'a15',name:'🚿 อาบน้ำ',start:'18:00',end:'18:30',progress:false},
+   {id:'a16',name:'🧵 ทำพวงกุญแจ / งานอดิเรก',start:'18:30',end:'20:00',progress:true},
+   {id:'a17',name:'🇬🇧 ฝึกภาษาอังกฤษ',start:'20:00',end:'21:30',progress:true},
+   {id:'a18',name:'🏃‍♀️ ออกกำลังกาย',start:'21:30',end:'21:45',progress:false},
+   {id:'a19',name:'🧹 เก็บห้อง',start:'21:45',end:'22:00',progress:false},
+   {id:'a20',name:'😴 นอน',start:'22:00',end:'00:00',progress:false}
+  ]},
+  {id:'t2',name:'ตาราง 2',tasks:[]},
+  {id:'t3',name:'ตาราง 3',tasks:[]}
+ ], days:{}, selectedTemplate:'t1'
+};
+let currentDate=new Date().toISOString().slice(0,10);
+function save(){localStorage.setItem(KEY,JSON.stringify(db))}
+function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active'); if(id==='calendar')renderCalendar();if(id==='templates')renderTemplates()}
+function openToday(){currentDate=new Date().toISOString().slice(0,10);openDay(currentDate)}
+function openDay(d){currentDate=d; ensureDay();show('day');renderDay()}
+function ensureDay(){
+ let d=db.days[currentDate]; let t=db.templates.find(x=>x.id===db.selectedTemplate)||db.templates[0];
+ if(!d)d=db.days[currentDate]={templateId:t.id,tasks:t.tasks.map(x=>({id:x.id,name:x.name,start:x.start||'00:00',end:x.end||'00:00',done:false,pct:0,progress:!!x.progress})),reminders:[],dream:'',diary:'',thought:'',strokes:[],stickers:[]};
+ d.tasks=(d.tasks||[]).map((x,i)=>({...x,start:x.start||t.tasks[i]?.start||'00:00',end:x.end||t.tasks[i]?.end||'00:00',progress:x.progress??t.tasks[i]?.progress??false}));
+}
+function thaiDate(s){return new Intl.DateTimeFormat('th-TH',{day:'numeric',month:'long',year:'numeric',weekday:'long'}).format(new Date(s+'T12:00:00'))}
+function renderDay(){
+ ensureDay();let d=db.days[currentDate];
+ document.getElementById('dayTitle').textContent=thaiDate(currentDate);
+ document.getElementById('templateTabs').innerHTML=db.templates.map(t=>`<button class="${t.id===d.templateId?'active':''}" onclick="useTemplate('${t.id}')">${t.name}</button>`).join('')+` <button onclick="newTemplate()">＋</button>`;
+ document.getElementById('tasks').innerHTML=d.tasks.map((x,i)=>`<div class="schedule-row"><input type="checkbox" ${x.done?'checked':''} onchange="setTask(${i},'done',this.checked)"><div class="schedule-main"><div class="schedule-time"><input type="time" aria-label="เวลาเริ่ม ${esc(x.name)}" value="${x.start||'00:00'}" onchange="setTask(${i},'start',this.value)"><span>–</span><input type="time" aria-label="เวลาจบ ${esc(x.name)}" value="${x.end||'00:00'}" onchange="setTask(${i},'end',this.value)"></div><div class="schedule-name">${esc(x.name)}</div><div class="schedule-meta"><small>ใช้เวลา ${formatDuration(durationMin(x.start,x.end))}</small>${x.progress?`<label><small>ความคืบหน้า</small> <input type="number" min="0" max="100" value="${x.pct||0}" onchange="setTask(${i},'pct',this.value)"> %</label>`:''}</div></div></div>`).join('');
+ document.getElementById('reminders').innerHTML=d.reminders.map((x,i)=>`<div class="task"><input type="checkbox" ${x.done?'checked':''} onchange="setReminder(${i},this.checked)"><span>${esc(x.name)}</span><button class="iconbtn danger" onclick="delReminder(${i})">×</button></div>`).join('')||'<small>ยังไม่มีรายการ</small>';
+ ['dream','diary','thought'].forEach(k=>{let el=document.getElementById(k);el.value=d[k];el.oninput=()=>{d[k]=el.value;save()}});
+ drawPie();loadCanvas();
+}
+function useTemplate(id){
+ let t=db.templates.find(x=>x.id===id),d=db.days[currentDate];d.templateId=id;
+ d.tasks=t.tasks.map(x=>({id:x.id,name:x.name,start:x.start||'00:00',end:x.end||'00:00',done:false,pct:0}));
+ save();renderDay()
+}
+function setTask(i,k,v){db.days[currentDate].tasks[i][k]=k==='pct'?Math.max(0,Math.min(100,+v||0)):v;save();renderDay()}
+function addTask(){let n=prompt('ชื่อรายการใหม่');if(!n)return;db.days[currentDate].tasks.push({id:crypto.randomUUID(),name:n,start:'00:00',end:'00:00',done:false,pct:0,progress:true});save();renderDay()}
+function addReminder(){let n=prompt('สิ่งที่ต้องไม่ลืม');if(n){db.days[currentDate].reminders.push({name:n,done:false});save();renderDay()}}
+function setReminder(i,v){db.days[currentDate].reminders[i].done=v;save()}
+function delReminder(i){db.days[currentDate].reminders.splice(i,1);save();renderDay()}
+function renderCalendar(){
+ let p=document.getElementById('monthPicker'); if(!p.value)p.value=currentDate.slice(0,7);
+ let [y,m]=p.value.split('-').map(Number),first=new Date(y,m-1,1),last=new Date(y,m,0),start=(first.getDay()+6)%7;
+ let names=['จ','อ','พ','พฤ','ศ','ส','อา'];let out=names.map(x=>`<div class="calhead">${x}</div>`).join('');
+ for(let i=0;i<start;i++)out+='<div></div>';
+ for(let day=1;day<=last.getDate();day++){let ds=`${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`,d=db.days[ds];out+=`<button class="day ${ds===currentDate?'today':''}" onclick="openDay('${ds}')"><div class="num">${day}</div><div class="dot">${d?'📝':''}</div></button>`}
+ document.getElementById('calendarGrid').innerHTML=out;
+}
+function renderTemplates(){document.getElementById('templateList').innerHTML=db.templates.map(t=>`<div class="card"><div class="row between"><h2>${esc(t.name)}</h2><button class="iconbtn danger" onclick="deleteTemplate('${t.id}')">ลบ</button></div>${t.tasks.map((x,i)=>`<div class="task"><span>${esc(x.name)}</span><button class="iconbtn" onclick="editTemplateTask('${t.id}',${i})">แก้</button></div>`).join('')}<button class="add" onclick="addTemplateTask('${t.id}')">＋ เพิ่มรายการ</button></div>`).join('')}
+function newTemplate(){let n=prompt('ชื่อตาราง');if(!n)return;let t={id:crypto.randomUUID(),name:n,tasks:[]};db.templates.push(t);db.selectedTemplate=t.id;save();renderTemplates()}
+function addTemplateTask(id){let n=prompt('ชื่อรายการ');if(!n)return;let t=db.templates.find(x=>x.id===id);t.tasks.push({id:crypto.randomUUID(),name:n,start:prompt('เวลาเริ่ม (เช่น 08:30)','08:00')||'00:00',end:prompt('เวลาสิ้นสุด (เช่น 09:30)','09:00')||'00:00',progress:confirm('รายการนี้ต้องการใส่เปอร์เซ็นต์ความคืบหน้าหรือไม่?')});save();renderTemplates()}
+function editTemplateTask(id,i){let t=db.templates.find(x=>x.id===id);let n=prompt('แก้ชื่อรายการ',t.tasks[i].name);if(n)t.tasks[i].name=n;save();renderTemplates()}
+function deleteTemplate(id){if(db.templates.length<=1)return alert('ต้องเหลือตารางอย่างน้อย 1 ตาราง');db.templates=db.templates.filter(x=>x.id!==id);save();renderTemplates()}
+function durationMin(a,b){
+ if(!a||!b)return 0;let [ah,am]=a.split(':').map(Number),[bh,bm]=b.split(':').map(Number);
+ let x=ah*60+am,y=bh*60+bm;if(y<x)y+=1440;return Math.max(0,Math.min(1440,y-x));
+}
+function formatDuration(m){if(m<60)return `${m} นาที`;let h=Math.floor(m/60),mm=m%60;return mm?`${h} ชม. ${mm} นาที`:`${h} ชม.`}
+function drawPie(){
+ const c=document.getElementById('pie'),d=db.days[currentDate],groups={};
+ d.tasks.forEach(x=>{const m=durationMin(x.start,x.end);if(m>0)groups[x.name]=(groups[x.name]||0)+m});
+ const items=Object.entries(groups).map(([n,v])=>({n,v})),total=items.reduce((a,b)=>a+b.v,0);
+ const pie=c.parentElement.querySelector('#pie');
+ if(!total){pie.style.background='none';document.getElementById('pieLegend').textContent='ใส่เวลาเริ่มและเวลาจบในตาราง แล้วแผนภูมิจะขึ้นตรงนี้';document.getElementById('totalTime').textContent='รวม 0 ชั่วโมง / 24 ชั่วโมง';return}
+ let acc=0;const stops=items.map((x,k)=>{const from=acc/total*360;acc+=x.v;const to=acc/total*360;return `hsl(${(k*47+18)%360},55%,70%) ${from}deg ${to}deg`}).join(', ');
+ pie.style.background=`conic-gradient(${stops})`;
+ document.getElementById('pieLegend').innerHTML=items.map(x=>`${esc(x.n)} — ${formatDuration(x.v)} (${Math.round(x.v/total*100)}%)`).join('<br>');
+ document.getElementById('totalTime').textContent=`รวมเวลาที่จัดตาราง ${formatDuration(total)} / 24 ชั่วโมง`;
+}
+
+let drawing=false,canvas=document.getElementById('decor'),ctx=canvas.getContext('2d');
+function pos(e){let r=canvas.getBoundingClientRect(),p=e.touches?e.touches[0]:e;return{x:(p.clientX-r.left)*canvas.width/r.width,y:(p.clientY-r.top)*canvas.height/r.height}}
+function start(e){drawing=true;let p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault()}
+function move(e){if(!drawing)return;let p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault()}
+function end(){drawing=false;saveCanvas()}
+canvas.addEventListener('pointerdown',start);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
+function saveCanvas(){db.days[currentDate].drawing=canvas.toDataURL();save()}
+function loadCanvas(){ctx.clearRect(0,0,canvas.width,canvas.height);let s=db.days[currentDate].drawing;if(s){let im=new Image();im.onload=()=>ctx.drawImage(im,0,0);im.src=s}}
+function clearCanvas(){ctx.clearRect(0,0,canvas.width,canvas.height);saveCanvas()}
+function addSticker(s){db.days[currentDate].stickers.push({s,x:40+Math.random()*500,y:30+Math.random()*140});save();renderStickers()}
+function renderStickers(){ /* prototype: stickers are stored; visual placement can be upgraded later */ }
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+document.getElementById('monthPicker').value=currentDate.slice(0,7);save();renderCalendar();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+
+</body>
+</html>
